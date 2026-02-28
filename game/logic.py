@@ -14,28 +14,6 @@ def init_state(config: GameConfig, stones_per_pit: int = 4) -> GameState:
     board[config.p1_store] = 0
     return GameState(board=tuple(board), player=0, config=config)
 
-
-def pits_range(player: int) -> range:
-    return range(0, 6) if player == 0 else range(7, 13)
-
-
-def store_index(player: int) -> int:
-    return P0_STORE if player == 0 else P1_STORE
-
-
-def opponent_store(player: int) -> int:
-    return P1_STORE if player == 0 else P0_STORE
-
-
-def is_own_pit(player: int, idx: int) -> bool:
-    return idx in pits_range(player)
-
-
-def opposite_pit(idx: int) -> int:
-    # Valid for pits only (0..5 or 7..12)
-    return 12 - idx
-
-
 def legal_moves(state: GameState) -> list[int]:
     b = state.board
     cfg = state.config

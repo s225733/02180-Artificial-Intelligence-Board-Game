@@ -3,8 +3,6 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class GameConfig:
     pits_per_side: int
-    player: int
-    config: GameConfig
 
     @property
     def board_size(self) -> int:
@@ -33,5 +31,4 @@ class GameConfig:
         return idx in self.pits_range(player)
 
     def opposite_pit(self, idx: int) -> int:
-        # only valid when idx is a pit (not a store)
         return 2 * self.pits_per_side - idx

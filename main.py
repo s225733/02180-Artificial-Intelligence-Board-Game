@@ -1,16 +1,22 @@
-from logic import (
+from game.config import GameConfig
+from game.logic import (
     GameState, init_state, legal_moves, apply_move, is_terminal, winner
 )
-
-P0_STORE = 6
-P1_STORE = 13
 
 
 def render(state: GameState) -> str:
     b = state.board
-    top = "  " + " ".join(f"{b[i]:2d}" for i in range(12, 6, -1))
-    mid = f"{b[P1_STORE]:2d}                   {b[P0_STORE]:2d}"
-    bot = "  " + " ".join(f"{b[i]:2d}" for i in range(0, 6))
+    cfg = state.config
+
+    # Top row: P1 pits right-to-left
+    top = "  " + " ".join(f"{b[i]:2d}" for i in range(2 * cfg.pits_per_side, cfg.pits_per_side, -1))
+
+    # Stores
+    mid = f"{b[cfg.p1_store]:2d} " + " " * (3 * cfg.pits_per_side + 2) + f"{b[cfg.p0_store]:2d}"
+
+    # Bottom row: P0 pits left-to-right
+    bot = "  " + " ".join(f"{b[i]:2d}" for i in range(0, cfg.pits_per_side))
+
     turn = f"Turn: P{state.player}"
     return "\n".join([turn, top, mid, bot])
 
@@ -30,7 +36,9 @@ def ask_human_move(state: GameState) -> int:
 
 
 def main():
-    state = init_state()
+    cfg = GameConfig(pits_per_side=6)   # change to 14 if you want
+    state = init_state(cfg)
+
     while True:
         print()
         print(render(state))
