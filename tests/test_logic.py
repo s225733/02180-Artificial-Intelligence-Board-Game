@@ -1,104 +1,147 @@
-import sys
-import os
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
+import pytest
 from game.logic import (
-    ROWS, COLS, EMPTY, P1, P2,
-    create_board, find_drop_row, drop_piece,
-    is_winner, is_draw
+    GameState,
+    init_state,
+    legal_moves,
+    apply_move,
+    is_terminal,
+    finalize_if_terminal,
+    score,
+    winner,
 )
 
-
-# Helper function to simulate real moves
-def drop(board, col, piece):
-    row = find_drop_row(board, col)
-    assert row is not None
-    drop_piece(board, row, col, piece)
-    return row
+P0_STORE = 6
+P1_STORE = 13
 
 
-# ---------- Board creation ----------
-def test_board_is_empty_and_correct_size():
-    board = create_board()
-
-    assert len(board) == ROWS
-    assert all(len(r) == COLS for r in board)
-    assert all(cell == EMPTY for row in board for cell in row)
-
-
-# ---------- Gravity ----------
-def test_drop_goes_to_bottom():
-    board = create_board()
-    row = drop(board, 0, P1)
-    assert row == ROWS - 1
+def test_init_state_shape_and_values():
+    s = init_state()
+    b = s.board
+    assert len(b) == 14
+    assert s.player == 0
+    assert b[P0_STORE] == 0
+    assert b[P1_STORE] == 0
+    assert all(b[i] == 4 for i in range(0, 6))
+    assert all(b[i] == 4 for i in range(7, 13))
 
 
-def test_drop_stacks():
-    board = create_board()
-    r1 = drop(board, 0, P1)
-    r2 = drop(board, 0, P2)
-
-    assert r1 == ROWS - 1
-    assert r2 == ROWS - 2
+def test_legal_moves_initial_p0():
+    s = init_state()
+    assert legal_moves(s) == [0, 1, 2, 3, 4, 5]
 
 
-def test_column_full_returns_none():
-    board = create_board()
+def test_apply_move_extra_turn_from_initial_pit2():
+    # From initial, playing pit 2 (4 stones) lands last stone in P0 store => extra turn
+    s = init_state()
+    s2, extra = apply_move(s, 2)
+    assert extra is True
+    assert s2.player == 0  # same player again
 
-    for _ in range(ROWS):
-        drop(board, 1, P1)
-
-    assert find_drop_row(board, 1) is None
-
-
-# ---------- Wins ----------
-def test_horizontal_win():
-    board = create_board()
-    for c in range(4):
-        drop(board, c, P1)
-
-    assert is_winner(board, P1)
+    b = s2.board
+    expected = (
+        4, 4, 0, 5, 5, 5, 1,  # 0..6
+        4, 4, 4, 4, 4, 4, 0   # 7..13
+    )
+    assert b == expected
 
 
-def test_vertical_win():
-    board = create_board()
-    for _ in range(4):
-        drop(board, 2, P2)
+def test_apply_move_skips_opponent_store():
+    # Force a move that would pass over opponent store (index 13) for player 0.
+    # Put 10 stones in pit 5 so sowing goes: 6,7,8,9,10,11,12, (skip 13), 0,1,2
+    b = [0] * 14
+    b[5] = 10
+    b[P0_STORE] = 0
+    b[P1_STORE] = 0
+    s = GameState(board=tuple(b), player=0)
 
-    assert is_winner(board, P2)
+    s2, _ = apply_move(s, 5)
+    b2 = s2.board
 
+    # Opponent store must remain unchanged
+    assert b2[P1_STORE] == 0
 
-def test_diagonal_win():
-    board = create_board()
-
-    # build diagonal \
-    drop(board, 0, P1)
-
-    drop(board, 1, P2)
-    drop(board, 1, P1)
-
-    drop(board, 2, P2)
-    drop(board, 2, P2)
-    drop(board, 2, P1)
-
-    drop(board, 3, P2)
-    drop(board, 3, P2)
-    drop(board, 3, P2)
-    drop(board, 3, P1)
-
-    assert is_winner(board, P1)
+    # Check key placements
+    assert b2[P0_STORE] == 1  # got one in own store
+    assert b2[7] == 1
+    assert b2[12] == 1
+    assert b2[0] == 1
+    assert b2[2] == 1
 
 
-def test_not_winner_with_three():
-    board = create_board()
-    for c in range(3):
-        drop(board, c, P1)
+def test_capture_rule():
+    # Set up: player 0 plays pit 1 with 1 stone, lands in pit 2 (empty),
+    # opposite pit (10) has stones => capture into P0 store.
+    b = [0] * 14
+    b[1] = 1
+    b[2] = 0
+    b[10] = 5
+    b[P0_STORE] = 0
+    b[P1_STORE] = 0
+    s = GameState(board=tuple(b), player=0)
 
-    assert not is_winner(board, P1)
+    s2, extra = apply_move(s, 1)
+    assert extra is False
+    b2 = s2.board
+
+    assert b2[2] == 0          # landed then captured, so cleared
+    assert b2[10] == 0         # opposite cleared
+    assert b2[P0_STORE] == 6   # 1 (own) + 5 (opposite)
+
+    # Player should switch (no extra turn)
+    assert s2.player == 1
 
 
-# ---------- Draw ----------
-def test_not_draw_on_empty_board():
-    board = create_board()
-    assert not is_draw(board)
+def test_terminal_sweep_when_one_side_empty():
+    # Player 0 has a single stone in pit 5; moving it drops into store => extra turn,
+    # and then P0 side is empty => terminal => sweep P1 pits into P1 store.
+    b = [0] * 14
+    b[5] = 1
+    b[P0_STORE] = 0
+    b[P1_STORE] = 0
+    b[7] = 2  # remaining stones on P1 side
+    s = GameState(board=tuple(b), player=0)
+
+    s2, extra = apply_move(s, 5)
+    assert extra is True  # last stone into store
+    assert is_terminal(s2) is True
+
+    b2 = s2.board
+    assert all(b2[i] == 0 for i in range(0, 6))
+    assert all(b2[i] == 0 for i in range(7, 13))
+    assert b2[P0_STORE] == 1
+    assert b2[P1_STORE] == 2
+
+
+def test_finalize_if_terminal_does_not_change_non_terminal():
+    s = init_state()
+    s2 = finalize_if_terminal(s)
+    assert s2 == s
+
+
+def test_invalid_move_wrong_side():
+    s = init_state()
+    with pytest.raises(ValueError):
+        apply_move(s, 7)  # pit on player 1 side, but it's player 0's turn
+
+
+def test_invalid_move_empty_pit():
+    b = list(init_state().board)
+    b[0] = 0
+    s = GameState(board=tuple(b), player=0)
+    with pytest.raises(ValueError):
+        apply_move(s, 0)
+
+
+def test_score_and_winner():
+    # Terminal state where stores decide winner
+    b = [0] * 14
+    b[P0_STORE] = 10
+    b[P1_STORE] = 7
+    s = GameState(board=tuple(b), player=0)
+    assert score(s) == 3
+    assert winner(s) == 0
+
+    b[P0_STORE] = 5
+    b[P1_STORE] = 5
+    s = GameState(board=tuple(b), player=0)
+    assert winner(s) is None
