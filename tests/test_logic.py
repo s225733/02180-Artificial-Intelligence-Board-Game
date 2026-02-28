@@ -1,5 +1,7 @@
 import pytest
 from game.logic import (
+    P0_STORE,
+    P1_STORE,
     GameState,
     init_state,
     legal_moves,
@@ -9,10 +11,6 @@ from game.logic import (
     score,
     winner,
 )
-
-P0_STORE = 6
-P1_STORE = 13
-
 
 def test_init_state_shape_and_values():
     s = init_state()
@@ -45,7 +43,7 @@ def test_apply_move_extra_turn_from_initial_pit2():
     assert b == expected
 
 
-def test_apply_move_skips_opponent_store():
+def test_sowing_skips_opponent_store_even_if_capture_occurs():
     # Force a move that would pass over opponent store (index 13) for player 0.
     # Put 10 stones in pit 5 so sowing goes: 6,7,8,9,10,11,12, (skip 13), 0,1,2
     b = [0] * 14
@@ -61,11 +59,11 @@ def test_apply_move_skips_opponent_store():
     assert b2[P1_STORE] == 0
 
     # Check key placements
-    assert b2[P0_STORE] == 1  # got one in own store
+    assert b2[P0_STORE] == 3  # got 3 in own store
     assert b2[7] == 1
     assert b2[12] == 1
-    assert b2[0] == 1
-    assert b2[2] == 1
+    assert b2[10] == 0
+    assert b2[2] == 0
 
 
 def test_capture_rule():
