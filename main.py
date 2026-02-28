@@ -4,6 +4,7 @@ from game.logic import (
 )
 
 
+
 def render(state: GameState) -> str:
     b = state.board
     cfg = state.config
@@ -36,8 +37,8 @@ def ask_human_move(state: GameState) -> int:
 
 
 def main():
-    cfg = GameConfig(pits_per_side=6)   # change to 14 if you want
-    state = init_state(cfg)
+    cfg = GameConfig(pits_per_side=2) # You can adjust the amount of pits per side here
+    state = init_state(cfg, stones_per_pit=8) # You can adjust the amount of stones per pit here
 
     while True:
         print()
