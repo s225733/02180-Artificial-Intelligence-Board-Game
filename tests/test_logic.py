@@ -1,5 +1,5 @@
 import pytest
-from game.config import GameConfig
+from game.config import make_standard_config
 from game.logic import (
     GameState,
     init_state,
@@ -13,7 +13,7 @@ from game.logic import (
 
 @pytest.fixture
 def cfg():
-    return GameConfig(pits_per_side=6)
+    return make_standard_config(pits_per_side=6)
 
 
 def test_init_state_shape_and_values(cfg):
