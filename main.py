@@ -1,4 +1,4 @@
-from game.config import GameConfig
+from game.config import make_standard_config
 from game.logic import (
     GameState, init_state, legal_moves, apply_move, is_terminal, winner
 )
@@ -37,8 +37,9 @@ def ask_human_move(state: GameState) -> int:
 
 
 def main():
-    cfg = GameConfig(pits_per_side=2) # You can adjust the amount of pits per side here
-    state = init_state(cfg, stones_per_pit=8) # You can adjust the amount of stones per pit here
+    cfg = make_standard_config(pits_per_side
+                               =2) # You can adjust the amount of pits per side here
+    state = init_state(cfg, stones_per_pit=2) # You can adjust the amount of stones per pit here
 
     while True:
         print()

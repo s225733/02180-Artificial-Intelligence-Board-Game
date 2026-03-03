@@ -43,8 +43,8 @@ def finalize_if_terminal(state: GameState) -> GameState:
     for i in cfg.pits_range(1):
         b[i] = 0
 
-    b[cfg.p0_store] += side0_sum
-    b[cfg.p1_store] += side1_sum
+    b[cfg.primary_store(0)] += side0_sum
+    b[cfg.primary_store(1)] += side1_sum
 
     return GameState(board=tuple(b), player=state.player, config=cfg)
 
@@ -62,17 +62,16 @@ def apply_move(state: GameState, pit: int) -> Tuple[GameState, bool]:
 
     b[pit] = 0
     idx = pit
-    opp_store = cfg.opponent_store(state.player)
 
     # Sow
     while stones > 0:
         idx = (idx + 1) % cfg.board_size
-        if idx == opp_store:
+        if cfg.should_skip(state.player, idx):
             continue
         b[idx] += 1
         stones -= 1
 
-    extra_turn = (idx == cfg.store_index(state.player))
+    extra_turn = cfg.grants_extra_turn(state.player, idx)
 
     # Capture: last stone in empty own pit AND opposite has stones
     if (not extra_turn) and cfg.is_own_pit(state.player, idx) and b[idx] == 1:
@@ -81,7 +80,7 @@ def apply_move(state: GameState, pit: int) -> Tuple[GameState, bool]:
             captured = b[opp] + b[idx]
             b[opp] = 0
             b[idx] = 0
-            b[cfg.store_index(state.player)] += captured
+            b[cfg.primary_store(state.player)] += captured
 
     next_player = state.player if extra_turn else (1 - state.player)
     new_state = GameState(board=tuple(b), player=next_player, config=cfg)
