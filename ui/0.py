@@ -1,4 +1,9 @@
 from tkinter import *
+from game.config import GameConfig
+from game.logic import (
+    GameState, init_state, legal_moves, apply_move, is_terminal, winner,score
+)
+import time
 
 # Create main window
 win = Tk()
@@ -60,4 +65,14 @@ player1_label.place(x=400, y=330)
 player2_label = Label(win, text="Player 2", font=("Helvetica", 14, "bold"), bg="#c19a6b")
 player2_label.place(x=400, y=20)
 
-win.mainloop()
+
+while 1:
+    score_= get_score(state)
+    label.config(text="New Text")
+    win.update_idletasks()  # handle redraws
+    win.update()            # handle events
+
+    # your custom logic here
+    time.sleep(0.01)
+
+# win.mainloop()

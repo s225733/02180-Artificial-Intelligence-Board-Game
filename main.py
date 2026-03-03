@@ -37,8 +37,8 @@ def ask_human_move(state: GameState) -> int:
 
 
 def main():
-    cfg = GameConfig(pits_per_side=2) # You can adjust the amount of pits per side here
-    state = init_state(cfg, stones_per_pit=8) # You can adjust the amount of stones per pit here
+    cfg = GameConfig(pits_per_side=6) # You can adjust the amount of pits per side here
+    state = init_state(cfg, stones_per_pit=3) # You can adjust the amount of stones per pit here
 
     while True:
         print()
