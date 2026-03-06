@@ -7,9 +7,10 @@ from game.logic import (
     apply_move,
     is_terminal,
     finalize_if_terminal,
-    score,
+    score_diff,
     winner,
 )
+
 
 @pytest.fixture
 def cfg():
@@ -46,8 +47,8 @@ def test_apply_move_extra_turn_from_initial_pit2(cfg):
 
     b = s2.board
     expected = (
-        4, 4, 0, 5, 5, 5, 1,  # 0..6 (store at 6)
-        4, 4, 4, 4, 4, 4, 0   # 7..13 (store at 13)
+        4, 4, 0, 5, 5, 5, 1,
+        4, 4, 4, 4, 4, 4, 0
     )
     assert b == expected
 
@@ -92,7 +93,7 @@ def test_terminal_sweep_when_one_side_empty(cfg):
     # P0 has one stone in pit 5 -> goes into store -> P0 side empty => terminal => sweep P1 side into P1 store
     b = [0] * cfg.board_size
     b[5] = 1
-    b[7] = 2  # P1 side has stones
+    b[7] = 2
     s = GameState(board=tuple(b), player=0, config=cfg)
 
     s2, extra = apply_move(s, 5)
@@ -115,7 +116,6 @@ def test_finalize_if_terminal_does_not_change_non_terminal(cfg):
 def test_invalid_move_wrong_side(cfg):
     s = init_state(cfg)
     with pytest.raises(ValueError):
-        # pick a pit on player 1 side
         apply_move(s, next(iter(cfg.pits_range(1))))
 
 
@@ -130,13 +130,13 @@ def test_invalid_move_empty_pit(cfg):
 
 
 def test_score_and_winner(cfg):
-    # score = P0 store - P1 store
+    # score_diff = P0 store - P1 store
     b = [0] * cfg.board_size
     b[cfg.p0_store] = 10
     b[cfg.p1_store] = 7
     s = GameState(board=tuple(b), player=0, config=cfg)
 
-    assert score(s) == 3
+    assert score_diff(s) == 3
     assert winner(s) == 0
 
     b[cfg.p0_store] = 5
