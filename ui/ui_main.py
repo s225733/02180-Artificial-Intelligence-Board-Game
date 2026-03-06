@@ -3,7 +3,8 @@
 from tkinter import Canvas, Label, Tk
 
 from game.config import GameConfig
-from game.logic import init_state, legal_moves, apply_move
+from game.logic import init_state, legal_moves, apply_move, is_terminal
+from ai_agent.minimax import choose_action
 
 cfg = None
 state = None
@@ -146,9 +147,26 @@ def render_ui() -> None:
     right_score.config(text=str(board[cfg.p0_store]))
 
 
+def play_ai_turn() -> None:
+    """Let the AI play while it's the AI player's turn."""
+    global state
+    
+    ai_player = 1
+    search_depth = 6
+    
+    while not is_terminal(state) and state.player == ai_player:
+        ai_move = choose_action(state, depth=search_depth)
+        state, _ = apply_move(state, ai_move)
+        render_ui()
+
+
 def on_click(event) -> None:
     """Handle clicks on the bottom pits."""
     global state
+    
+    # Only allow human clicks when it is a player 0's turn
+    if state.player != 0 or is_terminal(state):
+        return
 
     item = c.find_withtag("current")
     if not item:
@@ -163,6 +181,9 @@ def on_click(event) -> None:
             if index in legal_moves(state):
                 state, _ = apply_move(state, index)
                 render_ui()
+                
+                # If the human did not end the game, let the AI respond
+                play_ai_turn()
             break
 
 

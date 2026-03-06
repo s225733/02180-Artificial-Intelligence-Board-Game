@@ -77,7 +77,7 @@ def finalize_if_terminal(state: GameState) -> GameState:
 
 
 def apply_move(state: GameState, pit: int) -> Tuple[GameState, bool]:
-    """Apply a moce and return the new game state.
+    """Apply a move and return the new game state.
     
     Args:
         state: Current game state.
