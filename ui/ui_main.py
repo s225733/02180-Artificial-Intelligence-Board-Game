@@ -1,7 +1,8 @@
 """Tkinter user interface for Kalaha."""
 
 from random import Random
-from tkinter import Canvas, Label, Tk
+from tkinter import Canvas, Frame, Label, Tk
+import time
 
 from game.config import GameConfig
 from game.logic import (
@@ -32,6 +33,12 @@ PIT_OUTLINE = "#342015"
 TEXT_DARK = "#2b1b12"
 TEXT_LIGHT = "#f8f1df"
 
+STATS_BG = "#c4a87a"
+STATS_PANEL_BG = "#b89560"
+STATS_HEADER_FG = "#3d200f"
+STATS_VALUE_FG = "#5a2e10"
+STATS_DIM_FG = "#7a5535"
+
 STONE_COLORS = [
     ("#f5e7c7", "#d9c29a"),
     ("#ead7ae", "#cbb080"),
@@ -50,6 +57,7 @@ left_score = None
 right_score = None
 status_label = None
 subtitle_label = None
+restart_button = None
 
 top_pits = {}
 bottom_pits = {}
@@ -58,15 +66,40 @@ bottom_bounds = {}
 
 is_animating = False
 
+# Minimax stats
+stats = {
+    "last_time_ms": None,
+    "last_depth": None,
+    "last_move": None,
+    "move_count": 0,
+    "total_time_ms": 0.0,
+    "min_time_ms": None,
+    "max_time_ms": None,
+    "move_history": [],   # list of (move_pit, time_ms)
+}
+
+# Stat label widgets
+stat_labels = {}
+
 
 # ------------------ SETUP ------------------
 
 
 def init_game() -> None:
     """Initialize the game configuration and starting state."""
-    global cfg, state
+    global cfg, state, stats
     cfg = GameConfig(pits_per_side=6)
     state = init_state(cfg, stones_per_pit=6)
+    stats = {
+        "last_time_ms": None,
+        "last_depth": None,
+        "last_move": None,
+        "move_count": 0,
+        "total_time_ms": 0.0,
+        "min_time_ms": None,
+        "max_time_ms": None,
+        "move_history": [],
+    }
 
 
 def create_window() -> None:
@@ -75,98 +108,53 @@ def create_window() -> None:
 
     win = Tk()
     win.title("Kalaha")
-    win.geometry("980x560")
+    win.geometry("1220x580")
     win.configure(bg=WINDOW_BG)
 
     c = Canvas(win, width=980, height=470, bg=CANVAS_BG, highlightthickness=0)
-    c.pack(pady=16)
+    c.pack(side="left", pady=16, padx=(16, 0))
 
     # Board shadow
-    c.create_rectangle(
-        76, 76, 906, 386,
-        fill=BOARD_SHADOW,
-        outline="",
-    )
+    c.create_rectangle(76, 76, 906, 386, fill=BOARD_SHADOW, outline="")
 
     # Board frame
     c.create_rectangle(
         70, 70, 900, 380,
-        fill=BOARD_OUTER,
-        outline="#5a341d",
-        width=4,
+        fill=BOARD_OUTER, outline="#5a341d", width=4,
     )
 
     # Board inner
     c.create_rectangle(
         88, 88, 882, 362,
-        fill=BOARD_INNER,
-        outline="#a87442",
-        width=2,
+        fill=BOARD_INNER, outline="#a87442", width=2,
     )
 
     # Title
-    c.create_text(
-        490,
-        36,
-        text="Kalaha",
-        font=("Georgia", 28, "bold"),
-        fill=TEXT_DARK,
-    )
+    c.create_text(490, 36, text="Kalaha", font=("Georgia", 28, "bold"), fill=TEXT_DARK)
 
 
 def create_stores() -> None:
     """Draw the stores and create their score labels."""
     global left_score, right_score
 
-    # Shadows
     c.create_oval(114, 116, 192, 334, fill="#4f2a14", outline="")
     c.create_oval(788, 116, 866, 334, fill="#4f2a14", outline="")
 
-    # Main stores
-    c.create_oval(
-        108, 110, 186, 328,
-        fill=STORE_FILL,
-        outline=STORE_OUTLINE,
-        width=3,
-    )
-    c.create_oval(
-        782, 110, 860, 328,
-        fill=STORE_FILL,
-        outline=STORE_OUTLINE,
-        width=3,
-    )
+    c.create_oval(108, 110, 186, 328, fill=STORE_FILL, outline=STORE_OUTLINE, width=3)
+    c.create_oval(782, 110, 860, 328, fill=STORE_FILL, outline=STORE_OUTLINE, width=3)
 
-    # Soft inner highlight
-    c.create_oval(
-        116, 118, 178, 190,
-        outline="",
-    )
-    c.create_oval(
-        790, 118, 852, 190,
-        outline="",
-    )
+    c.create_oval(116, 118, 178, 190, outline="")
+    c.create_oval(790, 118, 852, 190, outline="")
 
     left_score = Label(
-        win,
-        text="0",
-        font=("Helvetica", 20, "bold"),
-        bg="#d8b989",
-        fg=TEXT_DARK,
-        padx=8,
-        pady=2,
-        relief="flat",
+        win, text="0", font=("Helvetica", 20, "bold"),
+        bg="#d8b989", fg=TEXT_DARK, padx=8, pady=2, relief="flat",
     )
     left_score.place(x=128, y=214)
 
     right_score = Label(
-        win,
-        text="0",
-        font=("Helvetica", 20, "bold"),
-        bg="#d8b989",
-        fg=TEXT_DARK,
-        padx=8,
-        pady=2,
-        relief="flat",
+        win, text="0", font=("Helvetica", 20, "bold"),
+        bg="#d8b989", fg=TEXT_DARK, padx=8, pady=2, relief="flat",
     )
     right_score.place(x=802, y=214)
 
@@ -193,81 +181,54 @@ def create_pits() -> None:
         top_bounds[i] = (x0, y_top, x0 + pit_width, y_top + pit_height)
         bottom_bounds[i] = (x0, y_bottom, x0 + pit_width, y_bottom + pit_height)
 
-        # Top row shadows
         c.create_oval(
             x0 + 4, y_top + 5, x0 + pit_width + 4, y_top + pit_height + 5,
-            fill="#4a2b1f",
-            outline="",
+            fill="#4a2b1f", outline="",
         )
-
-        # Bottom row shadows
         c.create_oval(
             x0 + 4, y_bottom + 5, x0 + pit_width + 4, y_bottom + pit_height + 5,
-            fill="#5a3317",
-            outline="",
+            fill="#5a3317", outline="",
         )
 
-        # Top row pits
         top_pit = c.create_oval(
-            x0,
-            y_top,
-            x0 + pit_width,
-            y_top + pit_height,
-            fill=TOP_PIT_FILL,
-            outline=PIT_OUTLINE,
-            width=3,
-            tags=(f"top_{i}",),
+            x0, y_top, x0 + pit_width, y_top + pit_height,
+            fill=TOP_PIT_FILL, outline=PIT_OUTLINE, width=3, tags=(f"top_{i}",),
         )
         top_pits[i] = top_pit
 
         c.create_oval(
-            x0 + 8,
-            y_top + 8,
-            x0 + pit_width - 10,
-            y_top + 34,
-            fill="#704738",
-            outline="",
+            x0 + 8, y_top + 8, x0 + pit_width - 10, y_top + 34,
+            fill="#704738", outline="",
         )
 
-        # Bottom row pits
         bottom_pit = c.create_oval(
-            x0,
-            y_bottom,
-            x0 + pit_width,
-            y_bottom + pit_height,
-            fill=BOTTOM_PIT_FILL,
-            outline=PIT_OUTLINE,
-            width=3,
-            tags=(f"bottom_{i}",),
+            x0, y_bottom, x0 + pit_width, y_bottom + pit_height,
+            fill=BOTTOM_PIT_FILL, outline=PIT_OUTLINE, width=3, tags=(f"bottom_{i}",),
         )
         bottom_pits[i] = bottom_pit
 
         c.create_oval(
-            x0 + 8,
-            y_bottom + 8,
-            x0 + pit_width - 10,
-            y_bottom + 34,
-            fill="#98633e",
-            outline="",
+            x0 + 8, y_bottom + 8, x0 + pit_width - 10, y_bottom + 34,
+            fill="#98633e", outline="",
         )
 
 
 def create_player_labels() -> None:
     """Create the player labels."""
-    c.create_text(
-        490,
-        103,
-        text="AI",
-        font=("Helvetica", 14, "bold"),
-        fill=TEXT_LIGHT,
+    c.create_text(490, 103, text="AI", font=("Helvetica", 14, "bold"), fill=TEXT_LIGHT)
+    c.create_text(490, 357, text="You", font=("Helvetica", 14, "bold"), fill=TEXT_LIGHT)
+
+
+def create_restart_label() -> None:
+    global restart_button
+    restart_button = Label(
+        win, text="Restart",
+        font=("Helvetica", 13, "bold"),
+        bg="#e8d4a8", fg=TEXT_DARK,
+        padx=14, pady=6, relief="flat",
     )
-    c.create_text(
-        490,
-        357,
-        text="You",
-        font=("Helvetica", 14, "bold"),
-        fill=TEXT_LIGHT,
-    )
+    restart_button.place(x=520, y=468)
+    restart_button.bind("<Button-1>", lambda _e: restart_game())
 
 
 def create_status_label() -> None:
@@ -275,25 +236,147 @@ def create_status_label() -> None:
     global status_label, subtitle_label
 
     subtitle_label = Label(
-        win,
-        text="You are Player 1 • AI is Player 2",
-        font=("Helvetica", 11),
-        bg=WINDOW_BG,
-        fg=TEXT_DARK,
+        win, text="You are Player 1  •  AI is Player 2",
+        font=("Helvetica", 11), bg=WINDOW_BG, fg=TEXT_DARK,
     )
-    subtitle_label.place(x=382, y=486)
+    subtitle_label.place(x=420, y=445)
 
     status_label = Label(
-        win,
-        text="",
+        win, text="",
         font=("Helvetica", 14, "bold"),
-        bg="#f0dfbf",
-        fg=TEXT_DARK,
-        padx=14,
-        pady=6,
-        relief="flat",
+        bg="#f0dfbf", fg=TEXT_DARK,
+        padx=14, pady=6, relief="flat",
     )
-    status_label.place(x=420, y=515)
+    status_label.place(x=410, y=468)
+
+
+# ------------------ STATS PANEL ------------------
+
+
+def create_stats_panel() -> None:
+    """Create the minimax stats side panel."""
+    global stat_labels
+
+    panel = Frame(win, bg=STATS_PANEL_BG, relief="flat", bd=0)
+    panel.place(x=1000, y=16, width=204, height=546)
+
+    # Header
+    Label(
+        panel, text="MINIMAX STATS",
+        font=("Courier", 11, "bold"),
+        bg=STATS_PANEL_BG, fg=STATS_HEADER_FG,
+        pady=8,
+    ).pack(fill="x")
+
+    # Divider
+    Frame(panel, height=2, bg="#a07840").pack(fill="x", padx=10)
+
+    def add_stat(parent, label_text, key, default="—"):
+        row = Frame(parent, bg=STATS_PANEL_BG, pady=4)
+        row.pack(fill="x", padx=12)
+        Label(
+            row, text=label_text,
+            font=("Courier", 9), bg=STATS_PANEL_BG, fg=STATS_DIM_FG,
+            anchor="w",
+        ).pack(fill="x")
+        val = Label(
+            row, text=default,
+            font=("Courier", 13, "bold"), bg=STATS_PANEL_BG, fg=STATS_VALUE_FG,
+            anchor="w",
+        )
+        val.pack(fill="x")
+        stat_labels[key] = val
+
+    # Spacer
+    Frame(panel, height=6, bg=STATS_PANEL_BG).pack()
+
+    add_stat(panel, "LAST MOVE TIME", "last_time_ms")
+    add_stat(panel, "SEARCH DEPTH", "last_depth")
+    add_stat(panel, "AI MOVES MADE", "move_count")
+    add_stat(panel, "AVG MOVE TIME", "avg_time_ms")
+    add_stat(panel, "FASTEST MOVE", "min_time_ms")
+    add_stat(panel, "SLOWEST MOVE", "max_time_ms")
+    add_stat(panel, "TOTAL AI TIME", "total_time_ms")
+
+    # Divider
+    Frame(panel, height=2, bg="#a07840").pack(fill="x", padx=10, pady=(8, 0))
+
+    # Move history header
+    Label(
+        panel, text="MOVE HISTORY",
+        font=("Courier", 10, "bold"),
+        bg=STATS_PANEL_BG, fg=STATS_HEADER_FG,
+        pady=6,
+    ).pack(fill="x")
+
+    history_frame = Frame(panel, bg=STATS_PANEL_BG)
+    history_frame.pack(fill="both", expand=True, padx=12)
+    stat_labels["history_frame"] = history_frame
+
+
+def update_stats_display() -> None:
+    """Refresh all stat label values from the global stats dict."""
+    def fmt_ms(v):
+        if v is None:
+            return "—"
+        if v < 1000:
+            return f"{v:.1f} ms"
+        return f"{v/1000:.2f} s"
+
+    if stats["last_time_ms"] is not None:
+        stat_labels["last_time_ms"].config(text=fmt_ms(stats["last_time_ms"]))
+    if stats["last_depth"] is not None:
+        stat_labels["last_depth"].config(text=str(stats["last_depth"]))
+
+    stat_labels["move_count"].config(text=str(stats["move_count"]))
+
+    if stats["move_count"] > 0:
+        avg = stats["total_time_ms"] / stats["move_count"]
+        stat_labels["avg_time_ms"].config(text=fmt_ms(avg))
+    else:
+        stat_labels["avg_time_ms"].config(text="—")
+
+    stat_labels["min_time_ms"].config(text=fmt_ms(stats["min_time_ms"]))
+    stat_labels["max_time_ms"].config(text=fmt_ms(stats["max_time_ms"]))
+    stat_labels["total_time_ms"].config(text=fmt_ms(stats["total_time_ms"]))
+
+    # Rebuild move history (last 6 entries, newest first)
+    hf = stat_labels["history_frame"]
+    for w in hf.winfo_children():
+        w.destroy()
+
+    recent = stats["move_history"][-6:][::-1]
+    for move_num, pit, ms in recent:
+        row = Frame(hf, bg="#c4a870", relief="flat")
+        row.pack(fill="x", pady=1)
+        Label(
+            row, text=f"#{move_num}",
+            font=("Courier", 8), bg="#c4a870", fg=STATS_DIM_FG,
+            width=3, anchor="w", padx=4,
+        ).pack(side="left")
+        Label(
+            row, text=f"pit {pit + 1}",
+            font=("Courier", 9, "bold"), bg="#c4a870", fg=STATS_VALUE_FG,
+            anchor="w",
+        ).pack(side="left")
+        Label(
+            row, text=fmt_ms(ms),
+            font=("Courier", 8), bg="#c4a870", fg=STATS_DIM_FG,
+            anchor="e", padx=4,
+        ).pack(side="right")
+
+
+def record_ai_move(pit: int, depth: int, elapsed_ms: float) -> None:
+    """Record a completed AI move into the stats dict and refresh display."""
+    stats["last_time_ms"] = elapsed_ms
+    stats["last_depth"] = depth
+    stats["last_move"] = pit
+    stats["move_count"] += 1
+    stats["total_time_ms"] += elapsed_ms
+    stats["min_time_ms"] = elapsed_ms if stats["min_time_ms"] is None else min(stats["min_time_ms"], elapsed_ms)
+    stats["max_time_ms"] = elapsed_ms if stats["max_time_ms"] is None else max(stats["max_time_ms"], elapsed_ms)
+    stats["move_history"].append((stats["move_count"], pit, elapsed_ms))
+    update_stats_display()
 
 
 # ------------------ STATUS ------------------
@@ -308,23 +391,25 @@ def update_status(message: str | None = None) -> None:
     if is_terminal(state):
         w = winner(state)
         if w is None:
-            status_label.config(text="Game over • Draw")
+            status_label.config(text="Game over  •  Draw")
         elif w == 0:
-            status_label.config(text="Game over • You win")
+            status_label.config(text="Game over  •  You win ")
         else:
-            status_label.config(text="Game over • AI wins")
+            status_label.config(text="Game over  •  AI wins")
         return
 
     if state.player == 0:
         status_label.config(text="Your turn")
     else:
-        status_label.config(text="AI's turn")
+        status_label.config(text="AI is thinking…")
 
 
 # ------------------ STONES ------------------
 
 
-def get_stone_layout(bounds: tuple[float, float, float, float], count: int) -> list[tuple[float, float, float]]:
+def get_stone_layout(
+    bounds: tuple[float, float, float, float], count: int
+) -> list[tuple[float, float, float]]:
     """Return deterministic pebble positions inside a pit."""
     if count <= 0:
         return []
@@ -342,14 +427,11 @@ def get_stone_layout(bounds: tuple[float, float, float, float], count: int) -> l
     positions = []
     rng = Random((int(x0) * 1000) + (int(y0) * 10) + count)
 
-    # Center-first layout
     slots = [(cx, cy)]
 
     ring_1 = [
-        (cx - ring_r_x, cy),
-        (cx + ring_r_x, cy),
-        (cx, cy - ring_r_y),
-        (cx, cy + ring_r_y),
+        (cx - ring_r_x, cy), (cx + ring_r_x, cy),
+        (cx, cy - ring_r_y), (cx, cy + ring_r_y),
         (cx - ring_r_x * 0.72, cy - ring_r_y * 0.72),
         (cx + ring_r_x * 0.72, cy - ring_r_y * 0.72),
         (cx - ring_r_x * 0.72, cy + ring_r_y * 0.72),
@@ -378,33 +460,26 @@ def get_stone_layout(bounds: tuple[float, float, float, float], count: int) -> l
     return positions
 
 
-def draw_stones(bounds: tuple[float, float, float, float], count: int, stone_tag: str, pit_tag: str) -> None:
+def draw_stones(
+    bounds: tuple[float, float, float, float],
+    count: int,
+    stone_tag: str,
+    pit_tag: str,
+) -> None:
     """Draw pebbles inside a pit."""
     c.delete(stone_tag)
 
     for idx, (cx, cy, r) in enumerate(get_stone_layout(bounds, count)):
         fill, outline = STONE_COLORS[idx % len(STONE_COLORS)]
 
-        # shadow
         c.create_oval(
-            cx - r + 1.5,
-            cy - r + 2,
-            cx + r + 1.5,
-            cy + r + 2,
-            fill="#6f573f",
-            outline="",
+            cx - r + 1.5, cy - r + 2, cx + r + 1.5, cy + r + 2,
+            fill="#6f573f", outline="",
             tags=(stone_tag, pit_tag),
         )
-
-        # stone
         c.create_oval(
-            cx - r,
-            cy - r,
-            cx + r,
-            cy + r,
-            fill=fill,
-            outline=outline,
-            width=1,
+            cx - r, cy - r, cx + r, cy + r,
+            fill=fill, outline=outline, width=1,
             tags=(stone_tag, pit_tag),
         )
 
@@ -413,10 +488,8 @@ def render_board(board: tuple[int, ...] | list[int]) -> None:
     """Render stones in pits and numbers in stores."""
     for i in range(cfg.pits_per_side):
         draw_stones(
-            bottom_bounds[i],
-            board[i],
-            stone_tag=f"bottom_stones_{i}",
-            pit_tag=f"bottom_{i}",
+            bottom_bounds[i], board[i],
+            stone_tag=f"bottom_stones_{i}", pit_tag=f"bottom_{i}",
         )
 
     start = cfg.pits_per_side + 1
@@ -425,10 +498,8 @@ def render_board(board: tuple[int, ...] | list[int]) -> None:
     for i in range(cfg.pits_per_side):
         board_index = end - 1 - i
         draw_stones(
-            top_bounds[i],
-            board[board_index],
-            stone_tag=f"top_stones_{i}",
-            pit_tag=f"top_{i}",
+            top_bounds[i], board[board_index],
+            stone_tag=f"top_stones_{i}", pit_tag=f"top_{i}",
         )
 
     left_score.config(text=str(board[cfg.p1_store]))
@@ -512,10 +583,15 @@ def play_ai_turn() -> None:
     if state.player != ai_player or is_animating:
         return
 
-    update_status("AI is thinking...")
+    update_status("AI is thinking…")
     win.update_idletasks()
 
+    t_start = time.perf_counter()
     ai_move = choose_action(state, depth=search_depth)
+    elapsed_ms = (time.perf_counter() - t_start) * 1000
+
+    record_ai_move(ai_move, search_depth, elapsed_ms)
+
     animate_move(ai_move, after_done=play_ai_turn)
 
 
@@ -569,6 +645,15 @@ def bind_events() -> None:
     c.config(cursor="hand2")
 
 
+def restart_game() -> None:
+    """Reset the game state and re-render the board."""
+    global state, is_animating
+    is_animating = False
+    init_game()
+    render_ui()
+    update_stats_display()
+
+
 # ------------------ RUN ------------------
 
 
@@ -580,6 +665,8 @@ def run_ui() -> None:
     create_pits()
     create_player_labels()
     create_status_label()
+    create_restart_label()
+    create_stats_panel()
     bind_events()
     render_ui()
     win.mainloop()
