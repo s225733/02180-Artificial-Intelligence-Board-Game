@@ -1,7 +1,7 @@
 """Tkinter user interface for Kalaha."""
 
 from random import Random
-from tkinter import Canvas, Label, Tk
+from tkinter import Canvas, Label, Tk, Button, Frame
 
 from game.config import GameConfig
 from game.logic import (
@@ -55,8 +55,179 @@ top_pits = {}
 bottom_pits = {}
 top_bounds = {}
 bottom_bounds = {}
+game_mode = "AI_HUMAN"
 
 is_animating = False
+
+welcome_frame = None
+
+
+# ------------------ WELCOME SCREEN ------------------
+def mode_button(text, mode, x):
+    #black text
+    
+    return Button(
+        welcome_frame,
+        text=text,
+        font=("Georgia", 14, "bold"),
+        bg="#7b4f2c",
+        fg="black",
+        activebackground="#5a341d",
+        activeforeground="black",
+        relief="flat",
+        padx=22,
+        pady=10,
+        cursor="hand2",
+        bd=0,
+        command=lambda: start_game(mode),
+    ).place(x=x, y=400)
+
+
+
+
+def show_welcome_screen() -> None:
+    """Display the welcome/splash screen before the game starts."""
+    global welcome_frame
+
+    welcome_frame = Frame(win, bg=WINDOW_BG, width=980, height=560)
+    welcome_frame.place(x=0, y=0, relwidth=1, relheight=1)
+    welcome_frame.lift()
+
+    # Decorative top band
+    top_band = Canvas(welcome_frame, width=980, height=8, bg="#7b4f2c", highlightthickness=0)
+    top_band.place(x=0, y=0)
+
+    # Decorative bottom band
+    bottom_band = Canvas(welcome_frame, width=980, height=8, bg="#7b4f2c", highlightthickness=0)
+    bottom_band.place(x=0, y=552)
+
+    # Central decorative canvas for the welcome art
+    art = Canvas(welcome_frame, width=980, height=560, bg=WINDOW_BG, highlightthickness=0)
+    art.place(x=0, y=0)
+
+    # Background wood-texture feel with subtle rectangles
+    art.create_rectangle(0, 0, 980, 560, fill=WINDOW_BG, outline="")
+
+    # Decorative board silhouette (large, centered, muted)
+    art.create_rectangle(130, 180, 850, 370, fill="#c4a47a", outline="#b8955e", width=2)
+    art.create_rectangle(148, 196, 832, 354, fill="#bd9e75", outline="", )
+
+    # Left store silhouette
+    art.create_oval(134, 186, 200, 364, fill="#a87d52", outline="#8c6033", width=2)
+    # Right store silhouette
+    art.create_oval(780, 186, 846, 364, fill="#a87d52", outline="#8c6033", width=2)
+
+    # Pit silhouettes - top row
+    pit_start = 225
+    for i in range(6):
+        x = pit_start + i * 94
+        art.create_oval(x, 204, x + 80, 272, fill="#9a7048", outline="#7a5330", width=2)
+
+    # Pit silhouettes - bottom row
+    for i in range(6):
+        x = pit_start + i * 94
+        art.create_oval(x, 285, x + 80, 353, fill="#b08050", outline="#8c6033", width=2)
+
+    # Decorative stone dots in pits
+    rng = Random(42)
+    for i in range(6):
+        x = pit_start + i * 94 + 40
+        for _ in range(4):
+            dx = rng.randint(-20, 20)
+            dy = rng.randint(-12, 12)
+            r = rng.randint(5, 9)
+            fill_col = rng.choice(["#f5e7c7", "#ead7ae", "#f0debb"])
+            art.create_oval(x + dx - r, 238 + dy - r, x + dx + r, 238 + dy + r, fill=fill_col, outline="#cbb080", width=1)
+            art.create_oval(x + dx - r, 320 + dy - r, x + dx + r, 320 + dy + r, fill=fill_col, outline="#cbb080", width=1)
+
+    # Overlay panel for text (semi-transparent feel via layered rect)
+    art.create_rectangle(240, 30, 740, 175, fill="#c4a070", outline="#9a6633", width=3)
+    art.create_rectangle(246, 36, 734, 169, fill="#cca87a", outline="#b8955e", width=1)
+
+    # Game title
+    art.create_text(
+        490, 78,
+        text="KALAHA",
+        font=("Georgia", 52, "bold"),
+        fill=TEXT_DARK,
+    )
+
+    # Subtitle
+    art.create_text(
+        490, 130,
+        text="The Ancient Stone-Sowing Game",
+        font=("Georgia", 16, "italic"),
+        fill="#5a3820",
+    )
+
+    # Decorative divider line
+    art.create_line(320, 155, 660, 155, fill="#9a6633", width=2)
+
+    # Rules blurb (below board silhouette)
+    # art.create_text(
+    #     490, 405,
+    #     text="Sow seeds • Capture stones • Fill your store",
+    #     font=("Helvetica", 13),
+    #     fill="#4a2e14",
+    # )
+
+    # art.create_text(
+    #     490, 430,
+    #     text="You play as Player 1 (bottom row)  •  AI plays as Player 2 (top row)",
+    #     font=("Helvetica", 11),
+    #     fill="#6b4020",
+    # )
+
+    # Start button
+    # start_btn = Button(
+    #     welcome_frame,
+    #     text="▶   Start Game",
+    #     font=("Georgia", 18, "bold"),
+    #     bg="#7b4f2c",
+    #     fg=TEXT_LIGHT,
+    #     activebackground="#5a341d",
+    #     activeforeground=TEXT_LIGHT,
+    #     relief="flat",
+    #     padx=32,
+    #     pady=12,
+    #     cursor="hand2",
+    #     bd=0,
+    #     command=start_game,
+    # )
+    # start_btn.place(x=365, y=460)
+
+    # Decorative dots / ornaments
+    for ox, oy in [(220, 490), (760, 490)]:
+        art.create_oval(ox - 6, oy - 6, ox + 6, oy + 6, fill="#9a6633", outline="#7a4f22", width=1)
+
+    art.create_text(
+        490, 530,
+        text="© Kalaha  •  6 pits per side  •  Minimax AI",
+        font=("Helvetica", 9),
+        fill="#8a6040",
+    )
+
+    mode_button("Human vs Human", "HUMAN_HUMAN", 240)
+    mode_button("AI vs Human", "AI_HUMAN", 430)
+    mode_button("AI vs AI", "AI_AI", 600)
+    #black 
+
+
+def start_game(mode = "AI_HUMAN") -> None:
+    """Dismiss the welcome screen and launch the game."""
+    global welcome_frame
+
+    if welcome_frame is not None:
+        welcome_frame.destroy()
+        welcome_frame = None
+
+    init_game()
+    create_stores()
+    create_pits()
+    create_player_labels()
+    create_status_label()
+    bind_events()
+    render_ui()
 
 
 # ------------------ SETUP ------------------
@@ -574,14 +745,8 @@ def bind_events() -> None:
 
 def run_ui() -> None:
     """Set up and start the Kalaha UI."""
-    init_game()
     create_window()
-    create_stores()
-    create_pits()
-    create_player_labels()
-    create_status_label()
-    bind_events()
-    render_ui()
+    show_welcome_screen()
     win.mainloop()
 
 
