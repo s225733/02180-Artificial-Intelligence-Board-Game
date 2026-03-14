@@ -32,3 +32,11 @@ source .venv/bin/activate
 ```bash
 pip install -r requirements.txt
 ```
+
+## Run experiments
+
+To run experiments, you run the following command from root directory:
+
+```bash
+python3 -m experiments.full_game_performance
+```
