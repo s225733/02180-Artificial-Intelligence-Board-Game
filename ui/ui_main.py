@@ -215,7 +215,8 @@ def show_welcome_screen() -> None:
 
 def start_game(mode = "AI_HUMAN") -> None:
     """Dismiss the welcome screen and launch the game."""
-    global welcome_frame
+    global welcome_frame, game_mode
+    game_mode = mode
 
     if welcome_frame is not None:
         welcome_frame.destroy()
@@ -229,6 +230,10 @@ def start_game(mode = "AI_HUMAN") -> None:
     bind_events()
     render_ui()
 
+    if game_mode == "AI_AI":
+        win.after(400, play_ai_turn)
+    elif game_mode == "AI_HUMAN" and state.player == 1:
+        win.after(400, play_ai_turn)
 
 # ------------------ SETUP ------------------
 
@@ -673,7 +678,10 @@ def play_ai_turn() -> None:
     """Let the AI play when it is the AI player's turn."""
     global state
 
-    ai_player = 1
+    if game_mode == "AI_AI":
+        ai_player = state.player        # both players are AI
+    else:
+        ai_player = 1                   # only player 1 is AI
     search_depth = 5
 
     if is_terminal(state):
@@ -694,10 +702,10 @@ def play_ai_turn() -> None:
 
 
 def on_click(event) -> None:
-    """Handle clicks on the bottom pits."""
     global state
 
-    if is_animating or state.player != 0 or is_terminal(state):
+    human_players = {0} if game_mode == "AI_HUMAN" else ({0, 1} if game_mode == "HUMAN_HUMAN" else set())
+    if is_animating or state.player not in human_players or is_terminal(state):
         return
 
     tags = c.gettags("current")
@@ -705,30 +713,53 @@ def on_click(event) -> None:
 
     for tag in tags:
         parts = tag.split("_")
-        if len(parts) == 2 and parts[0] == "bottom" and parts[1].isdigit():
-            clicked_index = int(parts[1])
-            break
+        if len(parts) == 2 and parts[1].isdigit():
+            if parts[0] == "bottom" and state.player == 0:
+                clicked_index = int(parts[1])
+                break
+            elif parts[0] == "top" and state.player == 1:
+                screen_i = int(parts[1])
+                start = cfg.pits_per_side + 1
+                clicked_index = start + cfg.pits_per_side - 1 - screen_i
+                break
 
-    if clicked_index is None:
-        return
-
-    if clicked_index in legal_moves(state):
-        animate_move(clicked_index, after_done=play_ai_turn)
+    if (
+        clicked_index is not None
+        and clicked_index in legal_moves(state)
+        and state.player in human_players
+        and not is_terminal(state)
+        and not is_animating
+    ):
+        animate_move(clicked_index, after_done=lambda: (
+            play_ai_turn() if game_mode == "AI_HUMAN" and state.player == 1 else None
+        ))
 
 
 def on_pit_enter(index: int) -> None:
-    """Highlight a bottom pit on hover."""
-    if is_animating or state.player != 0 or is_terminal(state):
+    human_players = {0} if game_mode == "AI_HUMAN" else ({0, 1} if game_mode == "HUMAN_HUMAN" else set())
+    if is_animating or state.player not in human_players or is_terminal(state):
         return
-
     if index in legal_moves(state):
         c.itemconfig(bottom_pits[index], width=4)
 
+def on_top_pit_enter(index: int) -> None:
+    if game_mode != "HUMAN_HUMAN":
+        return
+    if is_animating or state.player != 1 or is_terminal(state):
+        return
+    start = cfg.pits_per_side + 1
+    board_index = start + cfg.pits_per_side - 1 - index
+    if board_index in legal_moves(state):
+        c.itemconfig(top_pits[index], width=4)
+
+def on_top_pit_leave(index: int) -> None:
+    c.itemconfig(top_pits[index], fill=TOP_PIT_FILL, width=3)
 
 def on_pit_leave(index: int) -> None:
     """Remove hover highlight from a bottom pit."""
     c.itemconfig(bottom_pits[index], fill=BOTTOM_PIT_FILL, width=3)
 
+    
 
 def bind_events() -> None:
     """Bind mouse hover and click events to the bottom pits."""
@@ -736,6 +767,11 @@ def bind_events() -> None:
         c.tag_bind(f"bottom_{i}", "<Button-1>", on_click)
         c.tag_bind(f"bottom_{i}", "<Enter>", lambda _e, idx=i: on_pit_enter(idx))
         c.tag_bind(f"bottom_{i}", "<Leave>", lambda _e, idx=i: on_pit_leave(idx))
+
+    for i in top_pits:
+        c.tag_bind(f"top_{i}", "<Button-1>", on_click)
+        c.tag_bind(f"top_{i}", "<Enter>", lambda _e, idx=i: on_top_pit_enter(idx))
+        c.tag_bind(f"top_{i}", "<Leave>", lambda _e, idx=i: on_top_pit_leave(idx))
 
     c.config(cursor="hand2")
 
