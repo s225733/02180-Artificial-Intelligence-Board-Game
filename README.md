@@ -37,6 +37,13 @@ pip install -r requirements.txt
 
 To run experiments, you run the following command from root directory:
 
+For full game perfomance run:
+
 ```bash
 python3 -m experiments.full_game_performance
+```
+
+For depth comparison run:
+```bash
+python3 -m experiments.depth_comparison
 ```

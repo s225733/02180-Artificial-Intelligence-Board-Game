@@ -10,9 +10,9 @@ from game.logic import apply_move, init_state, is_terminal, winner
 from utils.measure_utils import measure_time_and_peak_ram
 
 
-def play_full_game(depth: int = 5) -> dict[str, int | None]:
+def play_full_game(depth: int) -> dict[str, int | None]:
     """
-    Simulate one full AI-vs-AI game.
+    Simulate one full AI-vs-AI game with the same depth. 
 
     Returns a dictionary containing:
     - winner
@@ -32,57 +32,92 @@ def play_full_game(depth: int = 5) -> dict[str, int | None]:
         "move_count": move_count,
     }
 
-
 def main() -> None:
-    depth = 5
+    depths = list(range(1, 11))  # depth from 1 to 10
     runs = 10
 
-    elapsed_times: list[float] = []
-    peak_rams: list[float] = []
-    move_counts: list[int] = []
-    winners: list[int | None] = []
+    all_results = []
 
-    for run_number in range(1, runs + 1):
-        metrics = measure_time_and_peak_ram(play_full_game, depth=depth)
-        result = metrics["result"]
+    for depth in depths:
+        elapsed_times = []
+        peak_rams = []
+        move_counts = []
+        winners = []
 
-        elapsed_times.append(metrics["elapsed_seconds"])
-        peak_rams.append(metrics["peak_ram_mb"])
-        move_counts.append(result["move_count"])
-        winners.append(result["winner"])
+        for run_number in range(1, runs + 1):
+            metrics = measure_time_and_peak_ram(play_full_game, depth=depth)
+            result = metrics["result"]
 
+            elapsed_times.append(metrics["elapsed_seconds"])
+            peak_rams.append(metrics["peak_ram_mb"])
+            move_counts.append(result["move_count"])
+            winners.append(result["winner"])
+
+            # stops runs for that depth
+            if metrics["elapsed_seconds"] > 6:
+                print(f"Stopping early at depth {depth} and at run number {run_number} because it is too slow")
+                break
+
+        
+        p0_wins = sum(1 for w in winners if w == 0)
+        p1_wins = sum(1 for w in winners if w == 1)
+        draws = sum(1 for w in winners if w is None)
+
+        summary = {
+            "depth": depth,
+            "runs": len(elapsed_times),  
+            "avg_time": mean(elapsed_times), 
+            "fastest_time": min(elapsed_times), 
+            "slowest_time": max(elapsed_times),
+            "avg_moves": mean(move_counts), 
+            "min_moves": min(move_counts), 
+            "max_moves": max(move_counts),
+            "avg_ram": mean(peak_rams), 
+            "max_ram": max(peak_rams),  
+            "min_ram": min(peak_rams), 
+            "p0_wins": p0_wins,
+            "p1_wins": p1_wins,
+            "draws": draws,
+        }
+
+        all_results.append(summary)
+
+        # stops all further depths
+        if summary["slowest_time"] and summary["slowest_time"] > 6:
+            print(f"Stopping depth search at {depth} because it run time takes too long")
+            break
+
+
+   
+    print("\n=== RESULTS TABLE ===")
+    print("Depth  |   Avg time |   Max time |    Avg RAM |    Max RAM |  Avg moves")
+    print("-" * 76)
+    for r in all_results:
         print(
-            f"Run {run_number:02d} | "
-            f"time={metrics['elapsed_seconds']:.6f} s | "
-            f"peak_ram={metrics['peak_ram_mb']:.3f} MB | "
-            f"moves={result['move_count']} | "
-            f"winner={result['winner']}"
+            f"{r['depth']:<6} | "
+            f"{r['avg_time']:>10.6f} | "
+            f"{r['slowest_time']:>10.6f} | "
+            f"{r['avg_ram']:>10.3f} | "
+            f"{r['max_ram']:>10.3f} | "
+            f"{r['avg_moves']:>10.2f}"
         )
 
-    print("\n=== Summary ===")
-    print(f"Search depth: {depth}")
-    print(f"Number of runs: {runs}")
-
-    print(f"Average time: {mean(elapsed_times):.6f} s")
-    print(f"Fastest time: {min(elapsed_times):.6f} s")
-    print(f"Slowest time: {max(elapsed_times):.6f} s")
-
-    print(f"Average moves played: {mean(move_counts):.2f}")
-    print(f"Min moves played: {min(move_counts)}")
-    print(f"Max moves played: {max(move_counts)}")
-
-    print(f"Average peak RAM: {mean(peak_rams):.3f} MB")
-    print(f"Highest observed peak RAM: {max(peak_rams):.3f} MB")
-    print(f"Lowest observed peak RAM: {min(peak_rams):.3f} MB")
-
-    p0_wins = sum(1 for w in winners if w == 0)
-    p1_wins = sum(1 for w in winners if w == 1)
-    draws = sum(1 for w in winners if w is None)
-
-    print(f"Player 0 wins: {p0_wins}")
-    print(f"Player 1 wins: {p1_wins}")
-    print(f"Draws: {draws}")
-
+    print("\n=== FULL SUMMARY BY DEPTH ===")
+    for r in all_results:
+        print(f"\nDepth {r['depth']}")
+        print(f"Number of runs: {r['runs']}")
+        print(f"Average time: {r['avg_time']:.6f} s")
+        print(f"Fastest time: {r['fastest_time']:.6f} s")
+        print(f"Slowest time: {r['slowest_time']:.6f} s")
+        print(f"Average moves played: {r['avg_moves']:.2f}")
+        print(f"Min moves played: {r['min_moves']}")
+        print(f"Max moves played: {r['max_moves']}")
+        print(f"Average peak RAM: {r['avg_ram']:.3f} MB")
+        print(f"Highest observed peak RAM: {r['max_ram']:.3f} MB")
+        print(f"Lowest observed peak RAM: {r['min_ram']:.3f} MB")
+        print(f"Player 0 wins: {r['p0_wins']}")
+        print(f"Player 1 wins: {r['p1_wins']}")
+        print(f"Draws: {r['draws']}")
 
 if __name__ == "__main__":
     main()

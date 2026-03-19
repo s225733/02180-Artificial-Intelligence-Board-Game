@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This experiment measures the practical runtime and memory usage of the Kalaha AI implementation during a full game.
+This experiment measures the practical runtime and memory usage of the Kalaha AI during a full game. To evaluate how performance scales, the experiment is repeated for multiple search depths from 1 to 10, allowing comparison of computational cost across increasing levels of search complexity.
 
 The AI uses the Minimax algorithm with Alpha-Beta pruning to choose actions. The experiment simulates complete AI-vs-AI games and measures:
 
@@ -13,7 +13,7 @@ The goal is to evaluate the practical time and space requirements of the algorit
 
 ## What the Experiment Does
 
-The experiment runs several full Kalaha games where both players use the same AI agent.
+The experiment runs several full Kalaha games where both players use the same AI agent. During the experiment multiple full games are simulated with different search depth to evaluate the perfomance metrics.
 
 For each game run:
 
@@ -50,3 +50,21 @@ The AI algorithm is deterministic, meaning:
 - The number of moves and the winner remain the same across runs.
 
 This is expected and helps produce consistent performance measurements.
+
+## Additional Experiment: Depth Comparison
+
+In addition to the full game perfomance experiment, a separate experiment is conducted to compare the playing strength of different search depth.
+
+While the full game perfomance experiment evaluated computational cost when both players have the same depth, "Depth Comparison" compare two different depths. This is implemented to help evaluate which depth is better in terms of win rate and the perfomance metrics. By comparing search depth we can see if an increase in depths leads to a meaningful improvent in perfomance or not. 
+
+For each comparison:
+- player 1 have one depth
+- player 2 have another depth
+- The game is played multiple times with swapped starting state and action to reduce any biases 
+
+
+The experiments measures:
+- Number of wins for each of the depth
+- Number of draws
+- Score rate of the depths
+- Average time per game 
