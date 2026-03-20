@@ -54,7 +54,3 @@ After each run, the console prints a summary:
 depth=3 → 142 nodes, 38 pruned, best pit=2
 ```
 ```
-
----
-
-That covers everything a reader needs to run it, configure it, and understand the output at a glance. Let me know if you want it adjusted — e.g. a shorter version, or if you'd like to add a screenshot placeholder.
