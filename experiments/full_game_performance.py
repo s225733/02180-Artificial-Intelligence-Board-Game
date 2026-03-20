@@ -10,7 +10,7 @@ from game.logic import apply_move, init_state, is_terminal, winner
 from utils.measure_utils import measure_time_and_peak_ram
 
 
-def play_full_game(depth: int) -> dict[str, int | None]:
+def play_full_game(depth: int = 7) -> dict[str, int | None]:
     """
     Simulate one full AI-vs-AI game with the same depth. 
 

@@ -682,7 +682,7 @@ def play_ai_turn() -> None:
         ai_player = state.player        # both players are AI
     else:
         ai_player = 1                   # only player 1 is AI
-    search_depth = 5
+    search_depth = 7
 
     if is_terminal(state):
         render_ui()

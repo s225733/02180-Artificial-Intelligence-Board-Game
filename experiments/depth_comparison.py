@@ -93,15 +93,14 @@ def compare_depths(depth_a: int, depth_b: int, runs: int) -> None:
     print(f"Draws: {draws}")
     print(f"Depth {depth_a} score rate: {depth_a_score_rate:.2%}")
     print(f"Depth {depth_b} score rate: {depth_b_score_rate:.2%}")
-    # print(f"Average time per game: {mean(elapsed_times):.6f} s")
-    # print(f"Max time per game: {max(elapsed_times):.6f} s")
-    # print(f"Average moves per game: {mean(move_counts):.2f}")
-    # print(f"Average peak RAM: {mean(peak_rams):.3f} MB")
-    # print(f"Highest peak RAM: {max(peak_rams):.3f} MB")
+    print(f"Average time per game: {mean(elapsed_times):.6f} s")
+    print(f"Max time per game: {max(elapsed_times):.6f} s")
+    print(f"Average peak RAM: {mean(peak_rams):.3f} MB")
+    print(f"Highest peak RAM: {max(peak_rams):.3f} MB")
 
 
 def main() -> None:
-    runs = 30
+    runs = 10
 
     compare_depths(depth_a=7, depth_b=8, runs=runs)
     compare_depths(depth_a=7, depth_b=6, runs=runs)

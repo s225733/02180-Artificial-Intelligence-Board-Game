@@ -2,18 +2,35 @@
 
 ## Purpose
 
-This experiment measures the practical runtime and memory usage of the Kalaha AI during a full game. To evaluate how performance scales, the experiment is repeated for multiple search depths from 1 to 10, allowing comparison of computational cost across increasing levels of search complexity.
+This experiment measures the practical runtime and memory usage of the Kalaha AI during a full game. 
 
-The AI uses the Minimax algorithm with Alpha-Beta pruning to choose actions. The experiment simulates complete AI-vs-AI games and measures:
+Two experiments conducted:
+1. A depth comparison experiment evaluating different depth strength and weaknesses `(depth_comparison)`
+2. A perfomance experiment measuring run time and memory usage `(full_game_performance)`
 
-- Total runtime required to finish a full game
-- Peak RAM usage during execution
+The goal is to evaluate the practical time and space requirements of the algorithm for a given search depth and by comparing the results we can find an optimal depth. 
 
-The goal is to evaluate the practical time and space requirements of the algorithm for a given search depth.
+## What the Depth Comparison Experiment Does: 
+The experiment is conducted to compare the playing strength of different search depths.
 
-## What the Experiment Does
+For each comparison:
+- One player ues depth a
+- The other uses depth b
+- The match is plaued multipled times with swapped depth and starting positions
 
-The experiment runs several full Kalaha games where both players use the same AI agent. During the experiment multiple full games are simulated with different search depth to evaluate the perfomance metrics.
+Once they are compared the following metrics is used to measure:
+- Number of wins for each depth
+- Number of draws
+- Scoring rate for each depth
+- Average time per game 
+
+The experiments helps determine whether deeper search provides a meaningful advantage in the game. 
+
+## What the Full Game Perfomance Experiment Does
+
+This experiment measures the computational cost of the AI. It runs several full Kalaha games where both players use:
+- Use the same depth
+- Depth varys from 1-10
 
 For each game run:
 
@@ -32,11 +49,11 @@ The experiment is repeated multiple times to obtain stable performance measureme
 
 ## Interpretation of Results
 
-The experiment provides an empirical estimate of the algorithm's performance.
+By combining both experiments an optimal depth is evaluted to be 7. 
 
-From the example results:
+The results shows that:
 
-- A full AI-vs-AI Kalaha game at search depth 5 takes approximately 0.34 seconds on average.
+- A full AI-vs-AI Kalaha game at search depth 7 takes approximately 0.6 seconds on average with a run on 10 times.
 - Peak RAM usage is approximately 25 MB.
 - Runtime variation across runs is small, indicating stable performance.
 
@@ -50,21 +67,3 @@ The AI algorithm is deterministic, meaning:
 - The number of moves and the winner remain the same across runs.
 
 This is expected and helps produce consistent performance measurements.
-
-## Additional Experiment: Depth Comparison
-
-In addition to the full game perfomance experiment, a separate experiment is conducted to compare the playing strength of different search depth.
-
-While the full game perfomance experiment evaluated computational cost when both players have the same depth, "Depth Comparison" compare two different depths. This is implemented to help evaluate which depth is better in terms of win rate and the perfomance metrics. By comparing search depth we can see if an increase in depths leads to a meaningful improvent in perfomance or not. 
-
-For each comparison:
-- player 1 have one depth
-- player 2 have another depth
-- The game is played multiple times with swapped starting state and action to reduce any biases 
-
-
-The experiments measures:
-- Number of wins for each of the depth
-- Number of draws
-- Score rate of the depths
-- Average time per game 
