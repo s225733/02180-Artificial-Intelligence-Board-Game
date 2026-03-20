@@ -35,7 +35,10 @@ pip install -r requirements.txt
 
 ## Run experiments
 
+When running the commands please be patient and do not interrupt the process. The execution may take some time because all possible states and actions are being evaluated. As a results a run n $\leq $ 8 will be faster whereas n $\geq$ 9  may take significantly longer to execute. 
+
 To run experiments, you run the following command from root directory:
+
 
 For full game perfomance run:
 
@@ -47,3 +50,5 @@ For depth comparison run:
 ```bash
 python3 -m experiments.depth_comparison
 ```
+
+
