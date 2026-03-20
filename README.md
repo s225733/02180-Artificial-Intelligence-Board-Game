@@ -35,7 +35,9 @@ pip install -r requirements.txt
 
 ## Run experiments
 
-When running the commands please be patient and do not interrupt the process. The execution may take some time because all possible states and actions are being evaluated. As a results a run n $\leq $ 8 will be faster whereas n $\geq$ 9  may take significantly longer to execute. 
+When running the experiments, please be patient and avoid interrupting execution.
+The runtime grows exponentially with the search depth due to the branching factor of the game tree.
+Depths up to 8 remain computationally manageable, while depths ≥ 9 may result in significantly longer execution times due to complexity of $O(b^d)$
 
 To run experiments, you run the following command from root directory:
 
