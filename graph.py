@@ -28,7 +28,7 @@ from game.logic import (
 # ── Config ────────────────────────────────────────────────────────────────────
 
 STATIC_DEPTH      = 3   # depth for the readable PNG
-INTERACTIVE_DEPTH = 6   # depth for the interactive HTML
+INTERACTIVE_DEPTH = 7   # depth for the interactive HTML
 STONES_PER_PIT    = 6
 PITS_PER_SIDE     = 6
 
